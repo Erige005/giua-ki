@@ -1,0 +1,39 @@
+# --- 1. DEPLOYMENT: Quản lý Pod (nơi ứng dụng chạy) ---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: spring-app-deployment
+  labels:
+    app: spring-app
+spec:
+  replicas: 1 
+  selector:
+    matchLabels:
+      app: spring-app
+  template:
+    metadata:
+      labels:
+        app: spring-app
+    spec:
+      containers:
+      - name: spring-app-container
+        # ĐÃ CẬP NHẬT TÊN IMAGE CỦA BẠN
+        image: full-stack-app-app:latest 
+        imagePullPolicy: Never
+        ports:
+        - containerPort: 8080 # Cổng mà Spring Boot đang lắng nghe bên trong Container
+---
+# --- 2. SERVICE: Tạo cổng truy cập ổn định ---
+apiVersion: v1
+kind: Service
+metadata:
+  name: spring-app-service
+spec:
+  # NodePort cho phép truy cập từ bên ngoài K8s Cluster (máy tính của bạn)
+  type: NodePort 
+  selector:
+    app: spring-app # Service sẽ tìm kiếm các Pod có label này để trỏ tới
+  ports:
+    - protocol: TCP
+      port: 80 # Cổng nội bộ của Service
+      targetPort: 8080 # Cổng của Container (cổng 8080 của Spring Boot)

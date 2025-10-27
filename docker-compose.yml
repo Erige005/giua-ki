@@ -1,0 +1,26 @@
+version: '3.8'
+
+services:
+  app:
+    build: .
+    container_name: full-stack-app
+    ports:
+      - "8080:8080"
+    depends_on:
+      db:
+        condition: service_started
+
+  db:
+    image: mysql:8.0
+    container_name: mysql-db-app
+    restart: always
+    environment:
+      MYSQL_ROOT_PASSWORD: chitogeABVs32
+      MYSQL_DATABASE: demo3
+    ports:
+      - "3307:3306"
+    volumes:
+      - mysql-data-demo3:/var/lib/mysql
+
+volumes:
+  mysql-data-demo3:
