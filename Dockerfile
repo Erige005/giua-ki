@@ -16,7 +16,7 @@ RUN mvn clean package -DskipTests
 
 # Giai đoạn 2: Runtime (sử dụng JRE nhẹ hơn cho kích thước Image nhỏ)
 # *Tôi dùng lại openjdk:21 để giữ tính nhất quán theo yêu cầu của bạn*
-FROM openjdk:21-jre-slim
+FROM openjdk:21
 
 WORKDIR /app
 
