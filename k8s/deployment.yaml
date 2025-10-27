@@ -18,7 +18,7 @@ spec:
       containers:
       - name: java-app-container
         # PLACEHOLDER: Argo CD sẽ cập nhật tag này
-        image: ghcr.io/Erige005/giua-ki:latest 
+        image: ghcr.io/Erige005/giua-ki:b5c62fef6afb1ea8f1e1d64cd0839561812bce34 
         ports:
         - containerPort: 8080
 ---
