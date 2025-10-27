@@ -1,5 +1,5 @@
 # Giai đoạn 1: Build ứng dụng Java (sử dụng JDK để chạy Maven)
-FROM maven:3.9.5-jdk-21 AS builder
+FROM maven:3.9.5-jdk-17 AS builder
 
 WORKDIR /app
 
@@ -16,7 +16,7 @@ RUN mvn clean package -DskipTests
 
 # Giai đoạn 2: Runtime (sử dụng JRE nhẹ hơn cho kích thước Image nhỏ)
 # *Tôi dùng lại openjdk:21 để giữ tính nhất quán theo yêu cầu của bạn*
-FROM openjdk:21
+FROM openjdk:17
 
 WORKDIR /app
 
