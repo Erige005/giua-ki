@@ -1,0 +1,24 @@
+# argocd-app.yaml
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: java-app-giua-ki # Tên hiển thị trong giao diện Argo CD
+  namespace: argocd 
+spec:
+  # Nguồn: Repository GitHub của bạn
+  source:
+    repoURL: https://github.com/Erige005/giua-ki.git 
+    targetRevision: master # Theo dõi nhánh master
+    path: k8s # Thư mục chứa các file Deployment/Service (k8s/deployment.yaml)
+
+  # Đích: Cụm K8s và Namespace triển khai
+  destination:
+    server: https://kubernetes.default.svc # Cluster nội bộ
+    namespace: default # Namespace mặc định nơi Pods của bạn sẽ chạy
+
+  # Chính sách đồng bộ
+  project: default
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true  
