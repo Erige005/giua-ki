@@ -3,7 +3,7 @@ name: Java CI & Docker Build
 # 1. THAY ĐỔI: Kích hoạt khi có push lên branch 'main' (để dễ test CI)
 on:
   push:
-    branches: [ main ]
+    branches: [ master ]
   # Giữ lại trigger 'release' nếu bạn muốn
   # release:
   #   types: [created]
