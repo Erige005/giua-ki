@@ -1,0 +1,37 @@
+# k8s/deployment.yaml
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: java-app-deployment
+  labels:
+    app: java-app
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: java-app
+  template:
+    metadata:
+      labels:
+        app: java-app
+    spec:
+      containers:
+      - name: java-app-container
+        # PLACEHOLDER: Argo CD sẽ cập nhật tag này
+        image: ghcr.io/Erige005/giua-ki:latest 
+        ports:
+        - containerPort: 8080
+---
+# Thêm Service để truy cập ứng dụng
+apiVersion: v1
+kind: Service
+metadata:
+  name: java-app-service
+spec:
+  selector:
+    app: java-app
+  ports:
+    - protocol: TCP
+      port: 80
+      targetPort: 8080 # Cổng Container
+  type: LoadBalancer # Hoặc ClusterIP nếu bạn dùng Ingress
