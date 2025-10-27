@@ -1,5 +1,5 @@
 # Giai đoạn 1: Build ứng dụng Java (sử dụng JDK để chạy Maven)
-FROM maven:3.9.5-openjdk-21 AS builder
+FROM maven:3.9.5-jdk-21 AS builder
 
 WORKDIR /app
 
