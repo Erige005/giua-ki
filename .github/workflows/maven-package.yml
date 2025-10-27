@@ -1,15 +1,16 @@
 name: Java CI & Docker Build
 
-# 1. THAY ĐỔI: Kích hoạt khi có push lên branch 'main' (để dễ test CI)
+# Kích hoạt khi có push lên branch 'master'
 on:
   push:
     branches: [ master ]
-  # Giữ lại trigger 'release' nếu bạn muốn
   # release:
   #   types: [created]
 
 jobs:
-  # JOB 1: BUILD và TEST Java (Giữ lại logic của bạn)
+  # ----------------------------------------------------------------------------------
+  # JOB 1: BUILD và TEST Java (CI)
+  # ----------------------------------------------------------------------------------
   build_test_jar:
     runs-on: ubuntu-latest
     permissions:
@@ -17,33 +18,29 @@ jobs:
       packages: write
 
     steps:
-    - uses: actions/checkout@v4
+    - name: Checkout Code
+      uses: actions/checkout@v4
     
     - name: Set up JDK 17
       uses: actions/setup-java@v4
       with:
         java-version: '17'
         distribution: 'temurin'
-        # Các tham số Maven của bạn
         server-id: github
         settings-path: ${{ github.workspace }}
 
     - name: Build with Maven
-      # Thay đổi lệnh mvn deploy thành mvn package vì deploy sẽ thực hiện ở Job Docker
       run: mvn -B package --file pom.xml
-      
-    # BỎ qua bước Publish Maven Package tại đây (trừ khi bạn thực sự cần)
     
   # ----------------------------------------------------------------------------------
-  # JOB 2: BUILD và PUSH Docker Image (Mục tiêu chính)
+  # JOB 2: BUILD và PUSH Docker Image (CI)
   # ----------------------------------------------------------------------------------
   build_and_push_docker:
-    # Đảm bảo job này chỉ chạy sau khi Job 1 (Build và Test) thành công
     needs: build_test_jar 
     runs-on: ubuntu-latest
     permissions:
       contents: read
-      packages: write # Cần quyền này để đẩy Image lên GHCR
+      packages: write
 
     steps:
     - name: Checkout Code
@@ -54,7 +51,6 @@ jobs:
       uses: docker/metadata-action@v5
       with:
         images: ghcr.io/${{ github.repository }} 
-        # Sử dụng SHA của commit làm tag (dễ truy vết cho K8s)
         tags: |
           type=sha,format=long,prefix=
 
@@ -63,7 +59,7 @@ jobs:
       with:
         registry: ghcr.io
         username: ${{ github.actor }}
-        password: ${{ secrets.GITHUB_TOKEN }} # Sử dụng token mặc định của GitHub
+        password: ${{ secrets.GITHUB_TOKEN }}
         
     - name: Build and Push Docker Image
       uses: docker/build-push-action@v5
@@ -72,26 +68,23 @@ jobs:
         push: true
         tags: ${{ steps.meta.outputs.tags }}
         labels: ${{ steps.meta.outputs.labels }}
-        # ... (Phần Job build_test_jar và build_and_push_docker ở trên) ...
 
-# ----------------------------------------------------------------------------------
-# JOB 3: CẬP NHẬT GITOPS MANIFEST (Kích hoạt Argo CD)
-# ----------------------------------------------------------------------------------
+  # ----------------------------------------------------------------------------------
+  # JOB 3: CẬP NHẬT GITOPS MANIFEST (CD - Kích hoạt Argo CD)
+  # ----------------------------------------------------------------------------------
   update_k8s_manifest:
-    # Chạy sau khi Docker Image đã được push thành công
     needs: build_and_push_docker 
     runs-on: ubuntu-latest
     
-    # Cần quyền 'contents: write' để đẩy thay đổi trở lại Git
+    # Cần quyền 'contents: write' để đẩy thay đổi GitOps trở lại repo
     permissions:
       contents: write 
 
     steps:
     - name: Checkout Code
-      # Lấy code, bao gồm cả các file k8s/
+      # Lấy toàn bộ lịch sử để có thể commit/push
       uses: actions/checkout@v4
       with:
-        # Cần lấy full history để có thể push lại (fetch-depth: 0)
         fetch-depth: 0 
         
     - name: Cập nhật Image Tag trong Manifest
@@ -99,14 +92,13 @@ jobs:
         # 1. Định nghĩa đường dẫn Image SHA mới
         IMAGE_SHA="ghcr.io/${{ github.repository }}:${{ github.sha }}"
         
-        # 2. Thay thế placeholder 'latest' bằng SHA mới trong deployment.yaml
-        # Thay thế image: ghcr.io/...:latest bằng image: ghcr.io/...:<SHA>
-        # (Sử dụng lệnh sed để thực hiện thay thế trên file)
-        sed -i "s|image: ghcr.io/${{ github.repository }}:latest|image: $IMAGE_SHA|g" k8s/deployment.yaml
+        # 2. Thực hiện thay thế Tag Placeholder 'latest' bằng SHA commit mới
+        # Đây là lệnh SED chính xác dựa trên file deployment.yaml của bạn
+        sed -i "s|image: ghcr.io/Erige005/giua-ki:latest|image: $IMAGE_SHA|g" k8s/deployment.yaml
         
-    - name: Commit và Đẩy thay đổi K8s Manifest
+    - name: Commit và Đẩy thay đổi K8s Manifest (Kích hoạt Argo CD)
       uses: stefanzweifel/git-auto-commit-action@v5
       with:
-        # Commit file deployment.yaml đã được sửa đổi
         commit_message: 'CD: Update image tag to ${{ github.sha }} for Argo CD'
         files: k8s/deployment.yaml
+        commit_options: '--no-verify --author="github-actions[bot] <github-actions[bot]@users.noreply.github.com>"'
