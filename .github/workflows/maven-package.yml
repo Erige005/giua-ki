@@ -72,3 +72,41 @@ jobs:
         push: true
         tags: ${{ steps.meta.outputs.tags }}
         labels: ${{ steps.meta.outputs.labels }}
+        # ... (Phần Job build_test_jar và build_and_push_docker ở trên) ...
+
+# ----------------------------------------------------------------------------------
+# JOB 3: CẬP NHẬT GITOPS MANIFEST (Kích hoạt Argo CD)
+# ----------------------------------------------------------------------------------
+  update_k8s_manifest:
+    # Chạy sau khi Docker Image đã được push thành công
+    needs: build_and_push_docker 
+    runs-on: ubuntu-latest
+    
+    # Cần quyền 'contents: write' để đẩy thay đổi trở lại Git
+    permissions:
+      contents: write 
+
+    steps:
+    - name: Checkout Code
+      # Lấy code, bao gồm cả các file k8s/
+      uses: actions/checkout@v4
+      with:
+        # Cần lấy full history để có thể push lại (fetch-depth: 0)
+        fetch-depth: 0 
+        
+    - name: Cập nhật Image Tag trong Manifest
+      run: |
+        # 1. Định nghĩa đường dẫn Image SHA mới
+        IMAGE_SHA="ghcr.io/${{ github.repository }}:${{ github.sha }}"
+        
+        # 2. Thay thế placeholder 'latest' bằng SHA mới trong deployment.yaml
+        # Thay thế image: ghcr.io/...:latest bằng image: ghcr.io/...:<SHA>
+        # (Sử dụng lệnh sed để thực hiện thay thế trên file)
+        sed -i "s|image: ghcr.io/${{ github.repository }}:latest|image: $IMAGE_SHA|g" k8s/deployment.yaml
+        
+    - name: Commit và Đẩy thay đổi K8s Manifest
+      uses: stefanzweifel/git-auto-commit-action@v5
+      with:
+        # Commit file deployment.yaml đã được sửa đổi
+        commit_message: 'CD: Update image tag to ${{ github.sha }} for Argo CD'
+        files: k8s/deployment.yaml
